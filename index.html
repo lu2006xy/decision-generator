@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>决策生成器</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-size: cover;
+            background-position: center;
+            transition: background-image 2s ease-in-out; /* Smooth transition for background image */
+            display: flex;
+            flex-direction: column; /* Use column to center content vertically */
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden; /* Prevent scrollbars from background animation */
+            color: white; /* Default text color for better contrast with backgrounds */
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); /* Add text shadow for readability */
+        }
+
+        /* Animation effect for answer text */
+        .answer-text.fade-in {
+            animation: fadeIn 1s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Dynamic effect for buttons */
+        .button-pulse:hover {
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        /* Background bubble animation */
+        .bubble-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .bubble {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: floatUp 15s infinite ease-in-out;
+            opacity: 0;
+        }
+
+        @keyframes floatUp {
+            0% {
+                transform: translateY(100vh) scale(0);
+                opacity: 0;
+            }
+            20% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-20vh) scale(1.2);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bubble-container"></div>
+
+    <!-- Answer display directly in body -->
+    <div id="answerDisplay" class="answer-text text-3xl sm:text-4xl font-semibold text-white text-center mb-8 max-w-3xl px-4 transition-all duration-700 ease-in-out transform hover:scale-105">
+        <!-- Initial text is empty, first answer loaded by JS -->
+    </div>
+
+    <!-- Share button fixed to bottom right -->
+    <button id="shareBtn" class="button-pulse fixed bottom-8 right-8 bg-gradient-to-r from-blue-500 to-teal-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-blue-300 flex items-center justify-center z-10">
+        Share
+    </button>
+
+    <!-- Message box (kept for potential future use, but hidden by default) -->
+    <div id="messageBox" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-lg shadow-xl text-center text-gray-800">
+            <p id="messageText" class="text-lg font-semibold mb-4"></p>
+            <button id="closeMessageBox" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">确定</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Ensure __app_id and __firebase_config are available in the Canvas environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
+        // Decision answer list (English version) - now with a larger pool of unique base phrases
+        const englishAnswers = [];
+        const baseFriendlyPhrases = [
+            `Hey, why not just go for it? What's the worst that could happen?`,
+            `Trust your gut on this one, seriously. It usually knows best.`,
+            `Take a deep breath and think about what truly makes you happy.`,
+            `Don't overthink it, sometimes the simplest choice is the best.`,
+            `Talk it out with someone you trust, a fresh perspective always helps.`,
+            `If it feels right, it probably is. Go with that feeling!`,
+            `What if you tried something completely different? Could be a fun adventure!`,
+            `It's totally okay to not know right away. Give yourself some time.`,
+            `Just pick one and see what happens! Life's full of surprises.`,
+            `Think about what you'd tell a friend in your shoes. That usually helps.`,
+            `No pressure, but sometimes a little leap of faith is exactly what you need.`,
+            `Consider what would bring you the most peace, not just the easiest path.`,
+            `It's your call, but maybe list out the pros and cons on a piece of paper?`,
+            `Don't let fear hold you back. What's the best case scenario here?`,
+            `You've got this! Whatever you choose, it'll be the right one for you.`,
+            `If it's causing too much stress, maybe it's time to simplify.`,
+            `What's your heart telling you? Listen to that whisper.`,
+            `Sometimes, doing nothing is also a decision. Is that what you need?`,
+            `Just make a choice and commit to it. You can always adjust later.`,
+            `Imagine yourself a year from now. Which choice would you be glad you made?`,
+            `Take a step back and look at the bigger picture.`,
+            `What's the riskiest option? Is it worth it?`,
+            `Sleep on it. Things often look clearer in the morning.`,
+            `Don't try to please everyone. This decision is for you.`,
+            `What's the easiest path? Is it the right one?`,
+            `Visualize success with each option. Which feels better?`,
+            `Is there a middle ground? Sometimes compromise is key.`,
+            `Ask yourself: 'Will I regret not doing this?'`,
+            `Consider the impact on your energy and time.`,
+            `What's your intuition saying? It's often right.`,
+            `Break it down into smaller, manageable steps.`,
+            `If money wasn't an issue, what would you choose?`,
+            `What's the most responsible choice for your future self?`,
+            `Don't rush. A well-thought-out decision is better than a quick one.`,
+            `Is there a way to test out each option first?`,
+            `What's the worst-case scenario, and can you live with it?`,
+            `Think about your core values. Which choice aligns best?`,
+            `Sometimes, the best decision is to wait for more clarity.`,
+            `What's the most exciting option? Follow that spark!`,
+            `Consider the long-term consequences, not just the immediate ones.`,
+            `What's the most practical choice right now?`,
+            `Don't let perfection be the enemy of good enough.`,
+            `Is this decision reversible? That might make it easier.`,
+            `What's the most authentic choice for you?`,
+            `Think about what you've learned from past decisions.`,
+            `Is there a creative solution you haven't considered yet?`,
+            `What's the option that brings you the most peace of mind?`,
+            `Don't be afraid to change your mind later if needed.`,
+            `What's the most empowering choice for you?`,
+            `Sometimes, the answer is simply 'no' to everything else.`,
+            `If you had to choose right now, what would it be?`,
+            `Consider the ripple effect of your decision.`,
+            `What's the option that challenges you to grow?`,
+            `Don't let external pressure dictate your choice.`,
+            `What's the simplest way to move forward?`,
+            `Is there an opportunity hidden in this decision?`,
+            `What's the most courageous path you could take?`,
+            `Think about what truly matters to you in the long run.`,
+            `What's the most flexible option, allowing for changes?`,
+            `Sometimes, the answer is just to trust the process.`,
+            // New direct and whimsical phrases
+            `Yes!`,
+            `No.`,
+            `Maybe.`,
+            `Go for it!`,
+            `Don't do it.`,
+            `You got this!`,
+            `Trust yourself.`,
+            `Not now.`,
+            `Definitely.`,
+            `Absolutely not.`,
+            `Perhaps.`,
+            `It's a strong yes.`,
+            `A clear no.`,
+            `The stars align for you.`,
+            `Perhaps luck is on your right side.`, // "或许你的运气在右边"
+            `Listen to your heart.`,
+            `Take a chance!`,
+            `Think again.`,
+            `The answer is within you.`,
+            `Proceed with caution.`,
+            `It's a good idea.`,
+            `It's not the right time.`,
+            `Follow your instincts.`,
+            `The universe says yes.`,
+            `The universe says no.`,
+            `It's a sign!`,
+            `Wait for a better moment.`,
+            `You're on the right track.`,
+            `Reconsider.`,
+            `It's a definite maybe.`
+        ];
+
+        // Populate 1000 answers by cycling through the expanded base phrases
+        // This ensures 1000 answers with a much higher perceived uniqueness
+        for (let i = 0; i < 1000; i++) {
+            englishAnswers.push(baseFriendlyPhrases[i % baseFriendlyPhrases.length]);
+        }
+
+
+        // Array of publicly accessible natural landscape image URLs from Picsum Photos
+        // Removed `grayscale` parameter to ensure color images.
+        const backgroundImages = []; // This will be populated after successful preloading
+        const imageSources = [
+            `https://picsum.photos/id/100/1920/1080?blur=2`, // Forest-like, blurred
+            `https://picsum.photos/id/1018/1920/1080?blur=2`, // Mountains, blurred
+            `https://picsum.photos/id/1043/1920/1080?blur=2`, // Ocean, blurred
+            `https://picsum.photos/id/1080/1920/1080?blur=2`, // Desert, blurred
+            `https://picsum.photos/id/1025/1920/1080?blur=2`, // Trees/Nature, blurred
+            `https://picsum.photos/id/1050/1920/1080?blur=2`, // Landscape, blurred
+            `https://picsum.photos/id/1069/1920/1080?blur=2`, // Water/Lake, blurred
+            `https://picsum.photos/id/1074/1920/1080?blur=2`, // Abstract nature, blurred
+            `https://picsum.photos/id/1084/1920/1080?blur=2`, // River/Valley, blurred
+            `https://picsum.photos/id/1082/1920/1080?blur=2`  // Coastline, blurred
+        ];
+        let currentBackgroundIndex = 0;
+        let backgroundChangeIntervalId; // To store the interval ID for clearing
+
+        // UI elements
+        const answerDisplay = document.getElementById('answerDisplay');
+        const shareBtn = document.getElementById('shareBtn'); // Share button
+        // messageBox is now hidden by default and its functionality integrated into answerDisplay
+        const messageBox = document.getElementById('messageBox'); // Keep reference, but it's hidden
+        const messageText = document.getElementById('messageText'); // Keep reference, but it's hidden
+        const closeMessageBox = document.getElementById('closeMessageBox'); // Keep reference, but it's hidden
+
+        // Function to show message box (no longer actively used for translation errors)
+        function showMessageBox(message) {
+            messageText.textContent = message;
+            messageBox.classList.remove('hidden');
+        }
+
+        // Function to hide message box (no longer actively used for translation errors)
+        closeMessageBox.addEventListener('click', () => {
+            messageBox.classList.add('hidden');
+        });
+
+        // Function to change background image
+        function changeBackground() {
+            if (backgroundImages.length > 0) {
+                document.body.style.backgroundImage = `url('${backgroundImages[currentBackgroundIndex]}')`;
+                currentBackgroundIndex = (currentBackgroundIndex + 1) % backgroundImages.length;
+            } else {
+                // Fallback if no images loaded (e.g., network issues)
+                document.body.style.backgroundImage = 'none';
+                document.body.style.backgroundColor = '#667eea'; // A default fallback color
+                console.warn("所有背景图片加载失败。将使用纯色背景。");
+            }
+        }
+
+        // Function to select and display a random answer
+        async function displayRandomAnswer() {
+            // Remove old animation class to reapply
+            answerDisplay.classList.remove('fade-in');
+            // Force reflow to ensure animation resets
+            void answerDisplay.offsetWidth;
+
+            const randomIndex = Math.floor(Math.random() * englishAnswers.length);
+            const selectedEnglishAnswer = englishAnswers[randomIndex]; // Store the original English answer
+
+            // Detect browser language
+            const userLang = navigator.language || navigator.userLanguage;
+            const isChinese = userLang.startsWith('zh');
+
+            let displayHtml = `<span class="block">${selectedEnglishAnswer}</span>`; // Default to English answer, wrapped in a block span
+
+            // If in Chinese environment, attempt translation
+            if (isChinese) {
+                try {
+                    const prompt = `Translate ONLY the core decision advice from the following English phrase into concise, natural, standard simplified Chinese characters, with a friendly, casual, and empathetic tone. Provide ONLY the translated plain text, without any prefixes, explanations, or additional formatting: "${selectedEnglishAnswer}"`;
+                    let chatHistory = [];
+                    chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                    const payload = { contents: chatHistory };
+                    const apiKey = ""; // Canvas will automatically provide API key at runtime
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+                    let translatedText = "";
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        translatedText = result.candidates[0].content.parts[0].text;
+                    }
+
+                    // If translation is successful and not empty, display both languages
+                    if (translatedText && translatedText.trim().length > 0) {
+                        displayHtml = `<span class="block">${selectedEnglishAnswer}</span><span class="block text-xl opacity-75 mt-2">${translatedText.trim()}</span>`;
+                    } else {
+                        // If translation fails, display English with a note in Chinese
+                        displayHtml = `<span class="block">${selectedEnglishAnswer}</span><span class="block text-xl opacity-75 mt-2">(中文翻译失败，请检查网络或稍后再试)</span>`;
+                    }
+                } catch (error) {
+                    console.error('Error during translation attempt (displaying English fallback):', error);
+                    // If translation throws an error, display English with a note in Chinese
+                    displayHtml = `<span class="block">${selectedEnglishAnswer}</span><span class="block text-xl opacity-75 mt-2">(中文翻译失败，请检查网络或稍后再试)</span>`;
+                }
+            }
+
+            answerDisplay.innerHTML = displayHtml; // Use innerHTML for <br> tag and spans
+            answerDisplay.classList.add('fade-in'); // Add animation class
+        }
+
+        // Function to preload and load background images
+        async function loadBackgroundImages() {
+            answerDisplay.textContent = "正在加载背景图片..."; // Update loading message
+            answerDisplay.classList.add('fade-in');
+
+            const imagePromises = imageSources.map((src, index) => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.src = src;
+                    img.onload = () => {
+                        console.log(`Image ${index + 1} loaded successfully: ${src}`);
+                        resolve(src);
+                    };
+                    img.onerror = () => {
+                        console.error(`Failed to load image ${index + 1}: ${src}`);
+                        resolve(null); // Resolve with null if image fails, so Promise.all doesn't reject
+                    };
+                });
+            });
+
+            const loadedImages = await Promise.all(imagePromises);
+            backgroundImages.push(...loadedImages.filter(url => url !== null)); // Add only successfully loaded URLs
+
+            console.log(`成功加载了 ${backgroundImages.length} 张背景图片。`);
+
+            // Clear loading message before displaying answer
+            answerDisplay.textContent = "";
+
+            // Set initial background and start interval only if images were loaded
+            if (backgroundImages.length > 0) {
+                displayRandomAnswer(); // Display initial answer
+                if (backgroundChangeIntervalId) {
+                    clearInterval(backgroundChangeIntervalId);
+                }
+                changeBackground(); // Set initial background image
+                backgroundChangeIntervalId = setInterval(changeBackground, 10000); // Change background every 10 seconds
+            } else {
+                console.warn("所有背景图片加载失败。将使用纯色背景。");
+                document.body.style.backgroundImage = 'none'; // Clear any potential broken image
+                document.body.style.backgroundColor = '#667eea'; // Fallback to a default color
+                displayRandomAnswer(); // Still display an answer even if no background
+            }
+        }
+
+
+        // On page load, display a random answer and set up background/answer auto-updates
+        window.onload = () => {
+            createBubbles(); // Create background bubbles
+            loadBackgroundImages(); // Load and start cycling through background images
+        };
+
+        // Share button click event
+        shareBtn.addEventListener('click', () => {
+            window.open('https://moonynails.com/', '_blank'); // Open link in new tab
+        });
+
+        // Create background bubble effect
+        function createBubbles() {
+            const bubbleContainer = document.querySelector('.bubble-container');
+            const numberOfBubbles = 20; // Number of bubbles
+
+            for (let i = 0; i < numberOfBubbles; i++) {
+                const bubble = document.createElement('div');
+                bubble.classList.add('bubble');
+                const size = Math.random() * 60 + 20; // Bubble size 20px - 80px
+                bubble.style.width = `${size}px`;
+                bubble.style.height = `${size}px`;
+                bubble.style.left = `${Math.random() * 100}%`; // Random horizontal position
+                bubble.style.animationDuration = `${Math.random() * 10 + 10}s`; // Animation duration 10s - 20s
+                bubble.style.animationDelay = `${Math.random() * 5}s`; // Animation delay 0s - 5s
+                bubbleContainer.appendChild(bubble);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -117,7 +117,7 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
 
-        // Decision answer list (English version) - now with a larger pool of unique base phrases
+        // Decision answer list (English version)
         const englishAnswers = [];
         const baseFriendlyPhrases = [
             `Hey, why not just go for it? What's the worst that could happen?`,
@@ -213,10 +213,112 @@
             `It's a definite maybe.`
         ];
 
+        // Corresponding Chinese translations for baseFriendlyPhrases
+        // These are pre-translated to ensure offline functionality and avoid API errors.
+        const baseChinesePhrases = [
+            `嘿，为什么不试试看呢？最坏的情况又能怎样？`,
+            `这次听从你的直觉，真的。它通常最清楚。`,
+            `深呼吸，想想什么能真正让你快乐。`,
+            `别想太多，有时候最简单的选择就是最好的。`,
+            `和信任的人聊聊，新的视角总是有帮助的。`,
+            `如果感觉对了，那可能就是对的。跟着感觉走！`,
+            `如果你尝试一些完全不同的东西呢？那可能是一次有趣的冒险！`,
+            `不知道答案也没关系。给自己一些时间。`,
+            `随便选一个，看看会发生什么！生活充满了惊喜。`,
+            `想想如果你是朋友，你会怎么建议自己。这通常会有帮助。`,
+            `没有压力，但有时候一点点信念的飞跃正是你所需要的。`,
+            `考虑什么能给你带来最大的平静，而不仅仅是最简单的路。`,
+            `由你决定，但也许可以把利弊列在纸上？`,
+            `别让恐惧束缚你。最好的情况会是怎样？`,
+            `你能行的！无论你选择什么，那对你来说都会是正确的。`,
+            `如果它带来了太多压力，也许是时候简化一下了。`,
+            `你的心在告诉你什么？倾听那个低语。`,
+            `有时候，什么都不做也是一种决定。那是你需要的吗？`,
+            `就做个选择并坚持下去。你总能以后再做调整。`,
+            `想象一年后的自己。你会庆幸做了哪个选择？`,
+            `退一步，看看大局。`,
+            `哪个选项风险最大？值得吗？`,
+            `睡一觉。早上事情通常会更清楚。`,
+            `不要试图取悦所有人。这个决定是为你自己做的。`,
+            `哪条路最容易？它是正确的吗？`,
+            `想象每个选项的成功。哪个感觉更好？`,
+            `有折中方案吗？有时候妥协是关键。`,
+            `问问自己：‘我会后悔没有这样做吗？’`,
+            `考虑它对你的精力和时间的影响。`,
+            `你的直觉在说什么？它通常是对的。`,
+            `把它分解成更小、更容易管理的步骤。`,
+            `如果钱不是问题，你会选择什么？`,
+            `对未来的你来说，哪个选择最负责任？`,
+            `不要急。深思熟虑的决定胜过仓促的决定。`,
+            `有没有办法先测试一下每个选项？`,
+            `最坏的情况是什么，你能接受吗？`,
+            `想想你的核心价值观。哪个选择最符合？`,
+            `有时候，最好的决定是等待更清晰的时机。`,
+            `哪个选项最令人兴奋？追随那个火花！`,
+            `考虑长期的后果，而不仅仅是眼前的。`,
+            `现在最实际的选择是什么？`,
+            `不要让完美成为优秀的敌人。`,
+            `这个决定可逆吗？那可能会让它更容易。`,
+            `对你来说，哪个选择最真实？`,
+            `想想你从过去的决定中学到了什么。`,
+            `有没有你还没考虑过的创意解决方案？`,
+            `哪个选项能给你带来最大的安心？`,
+            `如果需要，不要害怕以后改变主意。`,
+            `哪个选项最能赋予你力量？`,
+            `有时候，答案就是对其他一切说“不”。`,
+            `如果你现在必须选择，会是什么？`,
+            `考虑你决定的连锁反应。`,
+            `哪个选项能挑战你成长？`,
+            `不要让外部压力左右你的选择。`,
+            `前进最简单的方法是什么？`,
+            `这个决定中是否隐藏着机会？`,
+            `你能选择的最勇敢的道路是什么？`,
+            `从长远来看，想想什么对你真正重要。`,
+            `哪个选项最灵活，允许改变？`,
+            `有时候，答案就是相信过程。`,
+            // New direct and whimsical phrases (Chinese translations)
+            `可以！`,
+            `不行。`,
+            `也许吧。`,
+            `放手去做！`,
+            `别做。`,
+            `你能行的！`,
+            `相信自己。`,
+            `现在不行。`,
+            `当然。`,
+            `绝对不行。`,
+            `或许。`,
+            `这是个强烈的肯定。`,
+            `一个明确的否定。`,
+            `众星为你闪耀。`,
+            `或许你的运气在右边。`,
+            `倾听你的心声。`,
+            `冒个险！`,
+            `再想想。`,
+            `答案在你心中。`,
+            `谨慎行事。`,
+            `这是个好主意。`,
+            `时机不对。`,
+            `跟随你的直觉。`,
+            `宇宙说可以。`,
+            `宇宙说不行。`,
+            `这是个信号！`,
+            `等待更好的时机。`,
+            `你走在正确的轨道上。`,
+            `重新考虑。`,
+            `这很可能是个肯定。`
+        ];
+
+
         // Populate 1000 answers by cycling through the expanded base phrases
-        // This ensures 1000 answers with a much higher perceived uniqueness
         for (let i = 0; i < 1000; i++) {
             englishAnswers.push(baseFriendlyPhrases[i % baseFriendlyPhrases.length]);
+        }
+
+        // Populate 1000 Chinese answers mirroring the English ones
+        const chineseAnswers = [];
+        for (let i = 0; i < 1000; i++) {
+            chineseAnswers.push(baseChinesePhrases[i % baseChinesePhrases.length]);
         }
 
 
@@ -279,6 +381,7 @@
 
             const randomIndex = Math.floor(Math.random() * englishAnswers.length);
             const selectedEnglishAnswer = englishAnswers[randomIndex]; // Store the original English answer
+            const selectedChineseAnswer = chineseAnswers[randomIndex]; // Get the corresponding Chinese answer
 
             // Detect browser language
             const userLang = navigator.language || navigator.userLanguage;
@@ -286,42 +389,10 @@
 
             let displayHtml = `<span class="block">${selectedEnglishAnswer}</span>`; // Default to English answer, wrapped in a block span
 
-            // If in Chinese environment, attempt translation
+            // If in Chinese environment, display both languages
             if (isChinese) {
-                try {
-                    const prompt = `Translate ONLY the core decision advice from the following English phrase into concise, natural, standard simplified Chinese characters, with a friendly, casual, and empathetic tone. Provide ONLY the translated plain text, without any prefixes, explanations, or additional formatting: "${selectedEnglishAnswer}"`;
-                    let chatHistory = [];
-                    chatHistory.push({ role: "user", parts: [{ text: prompt }] });
-                    const payload = { contents: chatHistory };
-                    const apiKey = ""; // Canvas will automatically provide API key at runtime
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    const result = await response.json();
-                    let translatedText = "";
-                    if (result.candidates && result.candidates.length > 0 &&
-                        result.candidates[0].content && result.candidates[0].content.parts &&
-                        result.candidates[0].content.parts.length > 0) {
-                        translatedText = result.candidates[0].content.parts[0].text;
-                    }
-
-                    // If translation is successful and not empty, display both languages
-                    if (translatedText && translatedText.trim().length > 0) {
-                        displayHtml = `<span class="block">${selectedEnglishAnswer}</span><span class="block text-xl opacity-75 mt-2">${translatedText.trim()}</span>`;
-                    } else {
-                        // If translation fails, display English with a note in Chinese
-                        displayHtml = `<span class="block">${selectedEnglishAnswer}</span><span class="block text-xl opacity-75 mt-2">(中文翻译失败，请检查网络或稍后再试)</span>`;
-                    }
-                } catch (error) {
-                    console.error('Error during translation attempt (displaying English fallback):', error);
-                    // If translation throws an error, display English with a note in Chinese
-                    displayHtml = `<span class="block">${selectedEnglishAnswer}</span><span class="block text-xl opacity-75 mt-2">(中文翻译失败，请检查网络或稍后再试)</span>`;
-                }
+                // Display English on top, Chinese on bottom
+                displayHtml = `<span class="block">${selectedEnglishAnswer}</span><span class="block text-xl opacity-75 mt-2">${selectedChineseAnswer}</span>`;
             }
 
             answerDisplay.innerHTML = displayHtml; // Use innerHTML for <br> tag and spans
